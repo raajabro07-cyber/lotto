@@ -1,17 +1,16 @@
 {
-  "name": "kerala-lottery-final-v7",
-  "version": "7.0.0",
+  "name": "kerala-lottery-v7-text-only",
+  "version": "7.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node --max-old-space-size=256 src/index.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
   "dependencies": {
     "express": "^4.21.2",
-    "node-telegram-bot-api": "^0.66.0",
-    "tesseract.js": "^5.1.1"
+    "node-telegram-bot-api": "^0.66.0"
   }
 }

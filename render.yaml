@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: kerala-lottery-final-v7
+    name: kerala-lottery-v7-text-only
     runtime: node
     plan: free
     buildCommand: npm install
-    startCommand: node src/index.js
+    startCommand: node --max-old-space-size=256 src/index.js
     autoDeploy: true
     healthCheckPath: /health
     envVars:
@@ -12,7 +12,5 @@ services:
         sync: false
       - key: WEBHOOK_SECRET
         generateValue: true
-      - key: MAX_TICKETS_PER_PHOTO
-        value: "10"
       - key: ADMIN_CHAT_ID
         sync: false
