@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kerala-lottery-frequency-v5
+    name: kerala-lottery-final-v7
     runtime: node
     plan: free
     buildCommand: npm install
@@ -14,3 +14,5 @@ services:
         generateValue: true
       - key: MAX_TICKETS_PER_PHOTO
         value: "10"
+      - key: ADMIN_CHAT_ID
+        sync: false
