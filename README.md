@@ -1,36 +1,29 @@
-# Kerala Lottery Analyzer V2 — Render Ready
+# Kerala Lottery One-Week Test V4
 
-## IMPORTANT FIX
-Do NOT use `yarn startnpm start`.
+READY FOR GITHUB -> RENDER.
 
-Manual Render settings:
-- Runtime: Node
-- Build Command: `npm install`
-- Start Command: `node src/index.js`
-- Health Check Path: `/health`
-- Plan: Free
+Render manual settings:
+Build Command: npm install
+Start Command: node src/index.js
+Health Check: /health
 
 Environment:
-- TELEGRAM_BOT_TOKEN = BotFather token
-- WEBHOOK_SECRET = any private string, e.g. lotto-secure-2026
-- MAX_TICKETS_PER_PHOTO = 10
-
-The bundle already includes 961 baseline first-prize history rows covering 2024-01-01 through 2026-09-04.
-Later, the clean 2021-2026 dataset can replace/extend this data file.
+TELEGRAM_BOT_TOKEN = BotFather token
+WEBHOOK_SECRET = any private string
+MAX_TICKETS_PER_PHOTO = 10
 
 Features:
-- Telegram webhook
-- Render wake via Telegram webhook request
-- Manual number analysis
-- 1-10 tickets from one photo
-- Local OCR, no paid AI
-- Current-date scoring
-- exact repeat suppression
-- 2/3/4-digit recurrence gaps
-- 30/90/365-day rolling frequency
-- day-of-week recurrence
-- previous-draw transition heuristic
-- ranking
-- /status
+- 4-digit direct analysis
+- 6-digit analysis + last-4
+- Historical appearance count/frequency
+- Historical 1-6 day recurrence rate
+- Exact recurrence gaps: 1d,2d,3d,4-6d,7-15d,16-30d,30+d
+- Recent 1-6 day suppression based on that suffix's own historical recurrence behavior
+- Median/min/max recurrence gap
+- Historical-model repeat score %
+- 10,000 possible last-4 candidate scan
+- Top 5 bot candidate suggestions
+- Photo OCR for multiple tickets
+- Telegram webhook / Render health endpoint
 
-Pattern Score is descriptive historical analysis, not actual winning probability.
+IMPORTANT: This bundle uses the currently available 961-record baseline dataset (2024-01-01 through 2026-09-04). Clean 2021-2026 data should later replace/extend it for a stronger model.

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kerala-lottery-analyzer
+    name: kerala-lottery-oneweek-test
     runtime: node
     plan: free
     buildCommand: npm install
