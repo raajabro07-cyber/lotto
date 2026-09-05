@@ -1,29 +1,20 @@
-# Kerala Lottery One-Week Test V4
+Kerala Lottery Frequency V5
 
-READY FOR GITHUB -> RENDER.
+Core change:
+- Main model is frequency-based: 365/180/90/30 days + all-history consistency.
+- Very recent hits only mildly reduce score; short-gap repeat rate is NOT treated as the main probability.
+- 4-digit and 6-digit inputs supported.
+- For 6-digit input, exact 6D and last-4 are analyzed.
+- Nearby historical candidates are searched around the last-4 using numeric +/-100 and up to 2 digit-position changes.
+- Only candidates with historical support are suggested.
+- If none qualify: NO STRONG HISTORICAL CANDIDATE.
 
-Render manual settings:
+Render:
 Build Command: npm install
 Start Command: node src/index.js
-Health Check: /health
+Health: /health
 
-Environment:
-TELEGRAM_BOT_TOKEN = BotFather token
-WEBHOOK_SECRET = any private string
-MAX_TICKETS_PER_PHOTO = 10
-
-Features:
-- 4-digit direct analysis
-- 6-digit analysis + last-4
-- Historical appearance count/frequency
-- Historical 1-6 day recurrence rate
-- Exact recurrence gaps: 1d,2d,3d,4-6d,7-15d,16-30d,30+d
-- Recent 1-6 day suppression based on that suffix's own historical recurrence behavior
-- Median/min/max recurrence gap
-- Historical-model repeat score %
-- 10,000 possible last-4 candidate scan
-- Top 5 bot candidate suggestions
-- Photo OCR for multiple tickets
-- Telegram webhook / Render health endpoint
-
-IMPORTANT: This bundle uses the currently available 961-record baseline dataset (2024-01-01 through 2026-09-04). Clean 2021-2026 data should later replace/extend it for a stronger model.
+Env:
+TELEGRAM_BOT_TOKEN
+WEBHOOK_SECRET
+MAX_TICKETS_PER_PHOTO=10
