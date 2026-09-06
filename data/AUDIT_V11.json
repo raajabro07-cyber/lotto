@@ -1,0 +1,13 @@
+{
+  "version": "11.0.0",
+  "four_digit_unique": 9984,
+  "four_digit_rows": 71849,
+  "first_prize_rows": 1027,
+  "bumper_4d_unique": 1371,
+  "static_last_complete": "2026-09-04",
+  "checks": {
+    "3542_last": "2026-09-04",
+    "0817_last": "2026-09-04",
+    "3068_bumper_last": "2026-07-18"
+  }
+}
