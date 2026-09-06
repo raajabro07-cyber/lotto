@@ -1,56 +1,76 @@
 
 import fs from "fs";
-import path from "path";
-const FILE=path.resolve("data/first_prize_history.csv"); let rows=[];
-function csv(line){const a=[];let c="",q=false;for(let i=0;i<line.length;i++){let x=line[i];if(x=='"'){if(q&&line[i+1]=='"'){c+='"';i++;}else q=!q;}else if(x==","&&!q){a.push(c);c="";}else c+=x;}a.push(c);return a;}
-export function loadData(){const ls=fs.readFileSync(FILE,"utf8").replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean),h=csv(ls.shift());rows=ls.map(l=>{const v=csv(l),o={};h.forEach((k,i)=>o[k]=v[i]||"");o.num=o.first_prize_number;o.date=new Date(o.draw_date+"T00:00:00Z");return o;}).filter(r=>/^\d{6}$/.test(r.num)&&!isNaN(r.date)).sort((a,b)=>a.date-b.date);return rows.length;}
-const days=(a,b)=>Math.floor((a-b)/86400000);
-function suffixHits(s){return rows.filter(r=>r.num.endsWith(s));}
-function gaps(list){const g=[];for(let i=1;i<list.length;i++)g.push(days(list[i].date,list[i-1].date));return g;}
-function median(a){if(!a.length)return null;const x=[...a].sort((a,b)=>a-b),m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2;}
-function lastGap(s,now){const a=suffixHits(s).filter(r=>r.date<=now);return a.length?days(now,a.at(-1).date):null;}
-function bucket(g){return {d1:g.filter(x=>x===1).length,d2:g.filter(x=>x===2).length,d3:g.filter(x=>x===3).length,d46:g.filter(x=>x>=4&&x<=6).length,d715:g.filter(x=>x>=7&&x<=15).length,d1630:g.filter(x=>x>=16&&x<=30).length,d30:g.filter(x=>x>30).length};}
-function profile4(s,now){
- const a=suffixHits(s),gs=gaps(a),b=bucket(gs),lg=lastGap(s,now),intervals=Math.max(gs.length,1),short=b.d1+b.d2+b.d3+b.d46;
- const freqPct=100*a.length/Math.max(rows.length,1),repeatPct=100*short/intervals;
- const recent=lg!==null&&lg<=6;
- let score=45+Math.min(25,a.length*2)+Math.min(15,repeatPct*.5);
- if(recent){ // user-requested historical cooldown model
-   if(repeatPct<10)score-=25; else if(repeatPct<25)score-=15; else score-=7;
- } else if(lg!==null && median(gs)!==null){
-   const med=median(gs); if(lg>=med*.7&&lg<=med*1.5)score+=10;
+const FOUR=JSON.parse(fs.readFileSync("data/four_index.json","utf8"));
+const FIRST=JSON.parse(fs.readFileSync("data/first_index.json","utf8"));
+const META=JSON.parse(fs.readFileSync("data/meta.json","utf8"));
+const SYNC="data/synced_results.json";
+let synced=[];try{synced=JSON.parse(fs.readFileSync(SYNC,"utf8"));if(!Array.isArray(synced))synced=[];}catch{synced=[];}
+
+const DAY=86400000,D=s=>new Date(s+"T00:00:00Z"),diff=(a,b)=>Math.floor((a-b)/DAY);
+function todayIST(){
+ const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const o={};for(const x of p)o[x.type]=x.value;return `${o.year}-${o.month}-${o.day}`;
+}
+function validIso(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s||"")))return false;const d=D(s);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===s;}
+function isFuture(s){return validIso(s)&&s>todayIST();}
+synced=synced.filter(r=>validIso(r.draw_date)&&!isFuture(r.draw_date));try{fs.writeFileSync(SYNC,JSON.stringify(synced));}catch{}
+
+function syncDates(n){return synced.filter(r=>r.kind==="four"&&r.winning_number===n).map(r=>r.draw_date);}
+function dates(n){return [...(FOUR[n]?.dates||[]),...syncDates(n)].filter(d=>validIso(d)&&!isFuture(d)).sort();}
+function total(n){return (FOUR[n]?.count||0)+synced.filter(r=>r.kind==="four"&&r.winning_number===n).length;}
+export function status(){
+ let latestComplete=META.static_last_complete||null,latestAny=latestComplete;
+ for(const r of synced){
+   if(!latestAny||r.draw_date>latestAny)latestAny=r.draw_date;
+   if(r.kind==="draw"&&r.complete===true&&(!latestComplete||r.draw_date>latestComplete))latestComplete=r.draw_date;
  }
- score=Math.max(0,Math.min(100,Math.round(score)));
- return {s,total:a.length,freqPct:+freqPct.toFixed(3),repeatPct:+repeatPct.toFixed(1),lastGap:lg,medianGap:median(gs),minGap:gs.length?Math.min(...gs):null,maxGap:gs.length?Math.max(...gs):null,b,score,recent};
+ return{fourHistoricalRows:Object.values(FOUR).reduce((a,x)=>a+x.count,0),fourUnique:Object.keys(FOUR).length,
+   firstRows:FIRST.length,syncedRows:synced.length,lastDate:latestAny,lastCompleteDate:latestComplete};
 }
-function exact6(n,now){
- const a=rows.filter(r=>r.num===n),gs=gaps(a),lg=a.length?days(now,a.at(-1).date):null;
- const short=gs.filter(x=>x>=1&&x<=6).length,p=gs.length?100*short/gs.length:0;
- let score=35+Math.min(30,a.length*8)+Math.min(20,p*.5);
- if(lg!==null&&lg<=6)score-=p<15?25:12;
- return {total:a.length,repeatPct:+p.toFixed(1),lastGap:lg,score:Math.max(0,Math.min(100,Math.round(score)))};
+function prof(n,now){
+ const ds=dates(n),h=k=>ds.filter(d=>{const q=diff(now,D(d));return q>=0&&q<=k}).length;
+ let last=null;for(let i=ds.length-1;i>=0;i--){const q=diff(now,D(ds[i]));if(q>=0){last={date:ds[i],days:q};break;}}
+ let score=Math.min(42,h(365)*7)+Math.min(18,h(180)*4)+Math.min(12,h(90)*3)+Math.min(28,total(n)*1.4);
+ return{s:n,total:total(n),h30:h(30),h90:h(90),h180:h(180),h365:h(365),last,score:Math.min(100,Math.round(score)),cooldown:!!(last&&last.days<=6)};
 }
-function neighborCandidates(input,now){
- const out=[];
- // Scan every 0000-9999 candidate; prioritize data-driven score plus similarity as a small support only.
- for(let i=0;i<10000;i++){
-   const s=String(i).padStart(4,"0"),p=profile4(s,now);
-   if(!p.total)continue;
-   let same=0;for(let j=0;j<4;j++)if(s[j]===input[j])same++;
-   let rank=p.score + same*1.5;
-   // Avoid immediate recent candidates unless their own short-repeat history is strong.
-   if(p.lastGap!==null&&p.lastGap<=3&&p.repeatPct<25)rank-=15;
-   out.push({...p,similarity:same,rank});
+function ham(a,b){let c=0;for(let i=0;i<4;i++)if(a[i]!==b[i])c++;return c;}
+function suggest(n,now){
+ const x=Number(n),a=[];
+ for(const s of Object.keys(FOUR)){if(s===n)continue;const dist=Math.abs(Number(s)-x),h=ham(n,s);if(dist>150&&h>2)continue;
+   const p=prof(s,now);if(p.cooldown)continue;if(p.h365===0&&p.total<2)continue;
+   const rank=p.score+(dist<=10?12:dist<=30?8:dist<=75?5:2)+(h===1?10:h===2?4:0);a.push({...p,dist,ham:h,rank});}
+ return a.sort((a,b)=>b.rank-a.rank||b.h365-a.h365||b.total-a.total).slice(0,5);
+}
+function root(n){let s=[...n].reduce((a,c)=>a+Number(c),0);while(s>9)s=[...String(s)].reduce((a,c)=>a+Number(c),0);return s;}
+function struct(n){
+ const d=[...n].map(Number);let doubles=0,triples=0,serial=0;for(let i=0;i<5;i++){if(d[i]===d[i+1])doubles++;if(Math.abs(d[i]-d[i+1])===1)serial++;}
+ for(let i=0;i<4;i++)if(d[i]===d[i+1]&&d[i]===d[i+2])triples++;const c={};d.forEach(x=>c[x]=(c[x]||0)+1);
+ const maxRepeat=Math.max(...Object.values(c)),fams=[[0,1,2,3],[1,2,3,4],[2,3,4,5],[3,4,5,6],[4,5,6,7],[5,6,7,8],[6,7,8,9]];
+ let density=0;for(const f of fams)density=Math.max(density,f.filter(x=>d.includes(x)).length);
+ return{doubles,triples,serial,maxRepeat,density,root:root(n),score:Math.min(100,doubles*15+triples*12+serial*8+(maxRepeat>=3?20:maxRepeat===2?10:0)+density*5)};
+}
+function first(n,now){
+ const s=struct(n),dr=root(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(now).replace(/\D/g,"")),rm=Math.max(0,100-Math.abs(s.root-dr)*18);
+ let best=6;for(const r of FIRST){let same=0;for(let i=0;i<6;i++)if(r.n[i]===n[i])same++;best=Math.min(best,6-same);}
+ const sim=Math.max(0,100-best*16),p4=prof(n.slice(-4),now);let score=Math.round(s.score*.5+sim*.3+rm*.2);if(p4.cooldown)score-=15;
+ return{structure:s,rootMatch:rm,simScore:sim,score:Math.max(0,score),red:score>=78&&!p4.cooldown};
+}
+export function analyzeInput(input,now=new Date()){
+ const d=String(input).replace(/\D/g,"");if(d.length!==4&&d.length!==6)return null;const f=d.slice(-4);
+ return{input:d,four:f,p4:prof(f,now),suggestions:suggest(f,now),first:d.length===6?first(d,now):null,asOf:todayIST()};
+}
+export function addFullResult(r){
+ if(!validIso(r.draw_date))return{added4:0,added1:0,rejected:true,reason:"INVALID_DATE"};
+ if(isFuture(r.draw_date))return{added4:0,added1:0,rejected:true,reason:"FUTURE_DATE"};
+ let a4=0,a1=0;const keys=new Set(synced.map(x=>`${x.kind}|${x.draw_date}|${x.winning_number||""}|${x.prize_amount||""}`));
+ if(r.first_prize&&/^\d{6}$/.test(r.first_prize)){
+   const k=`first|${r.draw_date}|${r.first_prize}|`;if(!keys.has(k)){synced.push({kind:"first",draw_date:r.draw_date,winning_number:r.first_prize,draw_no:r.draw_no||""});keys.add(k);a1++;}
  }
- return out.sort((a,b)=>b.rank-a.rank).slice(0,5);
+ for(const it of r.four_numbers||[]){
+   const n=it.number,amount=it.amount||"";if(!/^\d{4}$/.test(n))continue;
+   const k=`four|${r.draw_date}|${n}|${amount}`;if(!keys.has(k)){synced.push({kind:"four",draw_date:r.draw_date,winning_number:n,prize_amount:amount,prize_rank:it.rank||"",draw_no:r.draw_no||"",is_bumper:!!r.is_bumper});keys.add(k);a4++;}
+ }
+ const marker=`draw|${r.draw_date}||`;if(!keys.has(marker))synced.push({kind:"draw",draw_date:r.draw_date,complete:true,draw_no:r.draw_no||"",is_bumper:!!r.is_bumper});
+ try{fs.writeFileSync(SYNC,JSON.stringify(synced));}catch{}
+ return{added4:a4,added1:a1};
 }
-export function analyze(input,now=new Date()){
- const digits=String(input).replace(/\D/g,"");
- if(digits.length!==4&&digits.length!==6)return null;
- const s=digits.slice(-4),p4=profile4(s,now),e6=digits.length===6?exact6(digits,now):null;
- const suggestions=neighborCandidates(s,now);
- let combined=p4.score;
- if(e6)combined=Math.round(p4.score*.7+e6.score*.3);
- return {input:digits,suffix:s,p4,e6,combined,suggestions,asOf:now.toISOString().slice(0,10)};
-}
-export function status(){return {rows:rows.length,lastDate:rows.at(-1)?.draw_date||null};}

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kerala-lottery-v7-text-only
+    name: kerala-lottery-v10
     runtime: node
     plan: free
     buildCommand: npm install
