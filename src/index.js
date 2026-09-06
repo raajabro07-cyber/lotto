@@ -16,22 +16,24 @@ async function selfTest(id){
   lines.push(`${b?.p4?.last?.date==="2026-07-18"?"✅":"❌"} B3068 -> 2026-07-18`);
   lines.push(`${b?.p4?.inLast2>0?"✅":"❌"} B3068 recent-bumper filter`);
   lines.push(`${st.lastCompleteDate && st.lastCompleteDate<="2026-09-06"?"✅":"❌"} no future complete date`);
-  return bot.sendMessage(id,"V11 SELF TEST\n"+lines.join("\n")+"\n\nLatest complete:"+st.lastCompleteDate,kb());
+  return bot.sendMessage(id,"V12 SELF TEST\n"+lines.join("\n")+"\n\nLatest complete:"+st.lastCompleteDate,kb());
  }catch(e){return bot.sendMessage(id,"❌ SELF TEST ERROR: "+e.message,kb());}
 }
 
-async function stat(id){const s=status();return bot.sendMessage(id,`BOT ONLINE — V11 AUTO-CATCHUP\n4D rows:${s.fourHistoricalRows}\n4D unique:${s.fourUnique}\nFirst rows:${s.firstRows}\nSynced rows:${s.syncedRows}\nLatest any:${s.lastDate}\nLatest COMPLETE:${s.lastCompleteDate}`,kb());}
+async function stat(id){const s=status();return bot.sendMessage(id,`BOT ONLINE — V12 CURRENT-COMPLETE\n4D rows:${s.fourHistoricalRows}\n4D unique:${s.fourUnique}\nFirst rows:${s.firstRows}\nSynced rows:${s.syncedRows}\nLatest any:${s.lastDate}\nLatest COMPLETE:${s.lastCompleteDate}`,kb());}
 async function doSync(id){if(!isAdmin(id))return bot.sendMessage(id,"Sync admin-only.");await bot.sendMessage(id,"🔄 Catch-up sync starting...");const r=await syncToday();return bot.sendMessage(id,`${r.ok?"✅":"⚠️"} ${r.message}\nFrom:${r.from}\nTo:${r.to}\nResults found:${r.found}\nVerified:${r.verified}\nFailed:${r.failed}\n4D added:${r.added4}\nFirst added:${r.added1}\nBumpers:${(r.bumperRefresh||[]).join(", ")||"-"}\nDatabase latest:${r.databaseLatest}`,kb());}
-async function handle(m){if(!m?.chat?.id)return;const id=m.chat.id;if(m.text==="/start")return bot.sendMessage(id,`Kerala Lottery V11 AUTO-CATCHUP\nText only.\n4D / 6D / B4D / B6D supported.\nCatch-up sync included.`,kb());if(m.text==="/status")return stat(id);if(m.text==="/selftest")return selfTest(id);if(m.text==="/sync")return doSync(id);if(m.text?.startsWith("/syncurl ")){if(!isAdmin(id))return;try{const r=await syncUrl(m.text.slice(9).trim());return bot.sendMessage(id,`✅ URL verified/synced ${r.draw_date} ${r.draw_no} | 4D:${r.added4} | First:${r.added1}`,kb());}catch(e){return bot.sendMessage(id,`❌ ${e.message}`);}}if(m.text){const bv=[...m.text.toUpperCase().matchAll(/\bB(\d{4}|\d{6})\b/g)].map(x=>x[1]);if(bv.length){for(const v of bv){const b=analyzeBumper(v,new Date()),n=analyzeInput(v,new Date());if(b&&n)await bot.sendMessage(id,fmtBumper(b,n),kb());}return;}for(const v of [...m.text.matchAll(/\b(\d{4}|\d{6})\b/g)].map(x=>x[1])){const a=analyzeInput(v,new Date());if(a)await bot.sendMessage(id,fmt(a),kb());}}}
+async function handle(m){if(!m?.chat?.id)return;const id=m.chat.id;if(m.text==="/start")return bot.sendMessage(id,`Kerala Lottery V12 CURRENT-COMPLETE\nText only.\n4D / 6D / B4D / B6D supported.\nCatch-up sync included.`,kb());if(m.text==="/status")return stat(id);if(m.text==="/selftest")return selfTest(id);if(m.text==="/sync")return doSync(id);if(m.text?.startsWith("/syncurl ")){if(!isAdmin(id))return;try{const r=await syncUrl(m.text.slice(9).trim());return bot.sendMessage(id,`✅ URL verified/synced ${r.draw_date} ${r.draw_no} | 4D:${r.added4} | First:${r.added1}`,kb());}catch(e){return bot.sendMessage(id,`❌ ${e.message}`);}}if(m.text){const bv=[...m.text.toUpperCase().matchAll(/\bB(\d{4}|\d{6})\b/g)].map(x=>x[1]);if(bv.length){for(const v of bv){const b=analyzeBumper(v,new Date()),n=analyzeInput(v,new Date());if(b&&n)await bot.sendMessage(id,fmtBumper(b,n),kb());}return;}for(const v of [...m.text.matchAll(/\b(\d{4}|\d{6})\b/g)].map(x=>x[1])){const a=analyzeInput(v,new Date());if(a)await bot.sendMessage(id,fmt(a),kb());}}}
 async function cb(q){const id=q.message?.chat?.id;if(!id)return;try{await bot.answerCallbackQuery(q.id);}catch{}if(q.data==="sync_today")return doSync(id);if(q.data==="status")return stat(id);}
-app.get("/",(_,r)=>r.send("V11 AUTO-CATCHUP ONLINE"));app.get("/health",(_,r)=>r.json({ok:true,...status()}));app.post(`/telegram/${secret}`,(req,res)=>{res.sendStatus(200);if(req.body?.callback_query)cb(req.body.callback_query).catch(console.error);else handle(req.body?.message).catch(console.error);});
+app.get("/",(_,r)=>r.send("V12 CURRENT-COMPLETE ONLINE"));app.get("/health",(_,r)=>r.json({ok:true,...status()}));app.post(`/telegram/${secret}`,(req,res)=>{res.sendStatus(200);if(req.body?.callback_query)cb(req.body.callback_query).catch(console.error);else handle(req.body?.message).catch(console.error);});
 app.listen(port,"0.0.0.0",async()=>{
  const u=process.env.RENDER_EXTERNAL_URL;
  if(u)try{await bot.setWebHook(`${u.replace(/\/$/,"")}/telegram/${secret}`);}catch(e){console.error("WEBHOOK",e.message);}
  console.log("ONLINE",status());
  try{
-   console.log("AUTO_CATCHUP_START");
-   const r=await syncToday();
-   console.log("AUTO_CATCHUP_RESULT",r);
+   const st=status();
+   const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()),o={};for(const x of parts)o[x.type]=x.value;
+   const today=`${o.year}-${o.month}-${o.day}`;
+   if(st.lastCompleteDate<today){console.log("AUTO_CATCHUP_START");const r=await syncToday();console.log("AUTO_CATCHUP_RESULT",r);}
+   else console.log("AUTO_CATCHUP_SKIP_CURRENT",st.lastCompleteDate);
  }catch(e){console.error("AUTO_CATCHUP_ERROR",e.message);}
 });
